@@ -1,0 +1,8 @@
+apiVersion: drivethru.notjustanna.net/v1alpha1
+kind: StaticSite
+metadata:
+  name: my-site
+  namespace: my-app
+spec:
+  host: my-site.notjustanna.net
+  retain: false

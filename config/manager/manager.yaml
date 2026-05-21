@@ -1,0 +1,90 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: drivethru-manager
+  namespace: drivethru-system
+  labels:
+    app.kubernetes.io/name: drivethru
+    app.kubernetes.io/component: manager
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: drivethru
+      app.kubernetes.io/component: manager
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: drivethru
+        app.kubernetes.io/component: manager
+    spec:
+      serviceAccountName: drivethru-manager
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: manager
+          image: ghcr.io/notjustanna/drivethru:latest
+          imagePullPolicy: IfNotPresent
+          args:
+            - --leader-elect
+            - --metrics-bind-address=:8080
+            - --health-probe-bind-address=:8081
+          envFrom:
+            - configMapRef:
+                name: drivethru-config
+            - secretRef:
+                name: drivethru-secrets
+          ports:
+            - name: metrics
+              containerPort: 8080
+            - name: healthz
+              containerPort: 8081
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: healthz
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: healthz
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            readOnlyRootFilesystem: true
+          resources:
+            limits:
+              cpu: 500m
+              memory: 256Mi
+            requests:
+              cpu: 50m
+              memory: 64Mi
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: drivethru-config
+  namespace: drivethru-system
+data:
+  GARAGE_HOST: garage.garage-system.svc.cluster.local
+  TRAEFIK_ENTRYPOINT: websecure
+  # TRAEFIK_CERT_RESOLVER: letsencrypt
+  GARAGE_SERVICE_NAME: garage
+  GARAGE_SERVICE_NAMESPACE: garage-system
+  GARAGE_WEB_PORT: "3902"
+---
+# Replace `change-me` with your real Garage admin token (or manage this Secret out-of-band).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: drivethru-secrets
+  namespace: drivethru-system
+type: Opaque
+stringData:
+  GARAGE_ADMIN_TOKEN: change-me

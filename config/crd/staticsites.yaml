@@ -1,0 +1,86 @@
+apiVersion: apiextensions.k8s.io/v1
+kind: CustomResourceDefinition
+metadata:
+  name: staticsites.drivethru.notjustanna.net
+spec:
+  group: drivethru.notjustanna.net
+  scope: Namespaced
+  names:
+    kind: StaticSite
+    listKind: StaticSiteList
+    plural: staticsites
+    singular: staticsite
+    shortNames:
+      - ss
+  versions:
+    - name: v1alpha1
+      served: true
+      storage: true
+      subresources:
+        status: {}
+      additionalPrinterColumns:
+        - name: Host
+          type: string
+          jsonPath: .spec.host
+        - name: Ready
+          type: boolean
+          jsonPath: .status.ready
+        - name: Age
+          type: date
+          jsonPath: .metadata.creationTimestamp
+      schema:
+        openAPIV3Schema:
+          type: object
+          properties:
+            spec:
+              type: object
+              required:
+                - host
+              properties:
+                host:
+                  type: string
+                  minLength: 1
+                  description: Public hostname for the static site.
+                generatedSecretName:
+                  description: |
+                    Override Secret name (string) or disable Secret generation
+                    (literal false). Defaults to `{metadata.name}-s3`.
+                  x-kubernetes-preserve-unknown-fields: true
+                retain:
+                  type: boolean
+                  default: false
+                  description: When true, bucket and credentials survive deletion.
+            status:
+              type: object
+              properties:
+                ready:
+                  type: boolean
+                bucketName:
+                  type: string
+                secretName:
+                  type: string
+                conditions:
+                  type: array
+                  items:
+                    type: object
+                    required:
+                      - type
+                      - status
+                      - lastTransitionTime
+                      - reason
+                      - message
+                    properties:
+                      type:
+                        type: string
+                      status:
+                        type: string
+                      observedGeneration:
+                        type: integer
+                        format: int64
+                      lastTransitionTime:
+                        type: string
+                        format: date-time
+                      reason:
+                        type: string
+                      message:
+                        type: string
